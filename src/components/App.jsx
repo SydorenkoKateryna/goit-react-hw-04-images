@@ -47,7 +47,8 @@ const App = () => {
           toast.error(
             'Sorry, there are no images matching your search query. Please try again.'
           );
-
+          
+          setTotalImages(0);
           return;
         } else {
           setTotalImages(totalHits);
