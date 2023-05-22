@@ -1,4 +1,4 @@
-import { Component } from 'react';
+import { useState, useEffect } from 'react';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import getImages from 'api/getImages';
@@ -10,114 +10,86 @@ import css from './App.module.css';
 
 const LIMIT = 12;
 
-class App extends Component {
-  state = {
-    searchImage: '',
-    images: [],
-    error: '',
-    isLoading: false,
-    page: 1,
-    isLoadMoreBtnVisible: false,
-  };
+const App = () => {
+  const [searchImage, setSearchImage] = useState('');
+  const [images, setImages] = useState([]);
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalImages, setTotalImages] = useState(0);
 
-  handleSearch = searchImage => {
-    if (searchImage !== this.state.searchImage) {
-      this.setState({ searchImage, page: 1, images: [] });
+  const handleSearch = searchImageValue => {
+    if (searchImageValue !== searchImage) {
+      setSearchImage(searchImageValue);
+      setPage(1);
+      setImages([]);
     }
   };
 
-  handleLoadMoreBtnClick = () => {
-    this.setState(({ page }) => ({ page: page + 1 }));
+  const handleLoadMoreBtnClick = () => {
+    setPage(page => page + 1);
   };
 
-  async componentDidUpdate(prevProps, prevState) {
-    const { searchImage, page } = this.state;
+  useEffect(() => {
+    if (searchImage === '') {
+      return;
+    }
 
-    if (prevState.searchImage !== searchImage || prevState.page !== page) {
-      this.setState({
-        isLoading: true,
-        isLoadMoreBtnVisible: false,
-      });
+    setIsLoading(true);
 
-      try {
-        const response = await getImages(searchImage, page);
-        const { hits, totalHits } = response.data;
+    const fetchImages = async () => {
+      return await getImages(searchImage, page);
+    };
 
+    fetchImages()
+      .then(({ data: { hits, totalHits } }) => {
         if (totalHits === 0) {
           toast.error(
             'Sorry, there are no images matching your search query. Please try again.'
           );
 
-          this.setState({ isLoading: false });
           return;
-        }
-
-        if (prevState.searchImage !== searchImage) {
-          toast.success(`Hooray! We found ${totalHits} images.`);
-
-          this.setState({
-            images: hits,
-            isLoading: false,
-          });
-
-          if (totalHits > LIMIT) {
-            this.setState({ isLoadMoreBtnVisible: true });
-          }
         } else {
-          if (page > Math.ceil(totalHits / LIMIT)) {
-            toast.info(
-              "We're sorry, but you've reached the end of search results."
-            );
-
-            this.setState({
-              isLoading: false,
-              isLoadMoreBtnVisible: false,
-            });
-
-            return;
-          }
-
-          this.setState(prevState => {
-            return {
-              images: [...prevState.images, ...hits],
-              isLoading: false,
-              isLoadMoreBtnVisible: true,
-            };
-          });
+          setTotalImages(totalHits);
         }
-      } catch (error) {
+
+        if (page === 1) {
+          toast.success(`Hooray! We found ${totalHits} images.`);
+        }
+
+        setImages(prev => [...prev, ...hits]);
+      })
+      .catch(error => {
         error.message = "That's an error ☹️";
+        setError(error);
+      })
+      .finally(() => setIsLoading(false));
+  }, [page, searchImage]);
 
-        this.setState({ error, isLoading: false });
-      }
-    }
-  }
+  const isLoadMoreBtnVisible =
+    totalImages > LIMIT && page < Math.ceil(totalImages / LIMIT);
 
-  render() {
-    const { images, error, isLoading, isLoadMoreBtnVisible } = this.state;
+  return (
+    <div className={css.app}>
+      <Searchbar onSubmit={handleSearch} isLoading={isLoading} />
 
-    return (
-      <div className={css.app}>
-        <Searchbar onSubmit={this.handleSearch} isLoading={isLoading} />
+      {error && (
+        <h2 className={css.error}>
+          {error.request.status}. {error.message}
+        </h2>
+      )}
 
-        {error && (
-          <h2 className={css.error}>
-            {error.request.status}. {error.message}
-          </h2>
-        )}
+      {images.length !== 0 && <ImageGallery images={images} />}
 
-        {images.length !== 0 && <ImageGallery images={images} />}
+      {isLoading && <Loader />}
 
-        {isLoading && <Loader />}
+      {isLoadMoreBtnVisible && !isLoading && (
+        <Button handleClick={() => handleLoadMoreBtnClick()}></Button>
+      )}
 
-        {isLoadMoreBtnVisible && (
-          <Button handleClick={() => this.handleLoadMoreBtnClick()}></Button>
-        )}
-
-        <ToastContainer autoClose={3000} position="bottom-right" />
-      </div>
-    );
-  }
-}
+      <ToastContainer autoClose={3000} position="bottom-right" />
+    </div>
+  );
+};
 
 export default App;
