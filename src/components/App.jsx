@@ -7,6 +7,7 @@ import ImageGallery from './ImageGallery';
 import Button from './Button';
 import Loader from './Loader';
 import css from './App.module.css';
+import { BsCardImage } from 'react-icons/bs';
 
 const LIMIT = 12;
 
@@ -47,7 +48,7 @@ const App = () => {
           toast.error(
             'Sorry, there are no images matching your search query. Please try again.'
           );
-          
+
           setTotalImages(0);
           return;
         } else {
@@ -81,6 +82,12 @@ const App = () => {
       )}
 
       {images.length !== 0 && <ImageGallery images={images} />}
+
+      {images.length === 0 && !isLoading && !error && (
+        <div className={css.iconWrapper}>
+          <BsCardImage size={250} />
+        </div>
+      )}
 
       {isLoading && <Loader />}
 

@@ -36,7 +36,7 @@ const Searchbar = ({ onSubmit, isLoading }) => {
           type="text"
           autoComplete="off"
           autoFocus
-          placeholder="Search images and photos"
+          placeholder="Enter keywords..."
           value={value}
           onChange={handleChange}
         />
